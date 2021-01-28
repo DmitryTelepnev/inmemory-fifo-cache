@@ -66,9 +66,9 @@ func (c *inmemory) GetAll(n int) []interface{} {
 
 	var all []interface{}
 	for _, value := range c.storage {
-		l := len(value)
-		if n > l {
-			n = l
+		maxLen := len(value)
+		if n > maxLen {
+			n = maxLen
 		}
 		all = append(all, value[:n]...)
 	}
