@@ -30,6 +30,7 @@ func (c *inmemory) Put(key string, value interface{}) {
 		c.fifoKeys = c.fifoKeys[1:]
 
 		delete(c.storage, keyForEviction)
+		c.fifoKeys = append(c.fifoKeys, key)
 	}
 
 	if len(c.storage[key]) >= c.capacity {
@@ -37,7 +38,6 @@ func (c *inmemory) Put(key string, value interface{}) {
 	}
 
 	c.storage[key] = append(c.storage[key], value)
-	c.fifoKeys = append(c.fifoKeys, key)
 }
 
 func (c *inmemory) PutAsync(key string, value interface{}) {
@@ -67,19 +67,19 @@ func (c *inmemory) GetAll(n int) []interface{} {
 	var all []interface{}
 	for _, value := range c.storage {
 		l := len(value)
-		if l > n {
-			l = n
+		if n > l {
+			n = l
 		}
-		all = append(all, value[:l]...)
+		all = append(all, value[:n]...)
 	}
 
 	return all
 }
 
-func asyncProcessor(cache *inmemory, channel chan asyncPut) {
+func asyncProcessor(cache *inmemory) {
 	for {
-		asyncPut, isClosed := <-channel
-		if isClosed {
+		asyncPut, isOpened := <-cache.channel
+		if !isOpened {
 			break
 		}
 
@@ -100,7 +100,7 @@ func NewCache(n int) *inmemory {
 		fifoKeys: fifoKeys,
 	}
 
-	go asyncProcessor(cache, channel)
+	go asyncProcessor(cache)
 
 	return cache
 }
